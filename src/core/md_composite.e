@@ -28,16 +28,16 @@ feature -- Access
 
 	nodes: LIST [MD_NODE]
 
-	elements: LIST [MD_ELEMENT]
+	elements: LIST [MD_ITEM]
 		local
 			l_nodes: like nodes
 		do
 			l_nodes := nodes
-			create {ARRAYED_LIST [MD_ELEMENT]} Result.make (l_nodes.count)
+			create {ARRAYED_LIST [MD_ITEM]} Result.make (l_nodes.count)
 			across
 				l_nodes as c
 			loop
-				if attached {MD_ELEMENT} c.item as e then
+				if attached {MD_ITEM} c.item as e then
 					Result.force (e)
 				end
 			end
@@ -50,12 +50,44 @@ feature -- Change
 			nodes.wipe_out
 		end
 
-	force (n: MD_NODE)
+	put (a_node: MD_NODE)
+		require
+			(attached {MD_PROPERTY} a_node as l_prop) implies not l_prop.name.has (' ')
+		local
+			l_nodes: like nodes
 		do
-			nodes.force (n)
+			l_nodes := nodes
+			if attached {MD_PROPERTY} a_node as p then
+				if attached property (p.name) as prev then
+					prev.merge (p)
+				else
+					l_nodes.force (p)
+					p.set_parent (Current)
+				end
+			else
+				l_nodes.force (a_node)
+				a_node.set_parent (Current)
+			end
+
 		end
 
 feature -- Report
+
+	property (a_prop_name: READABLE_STRING_GENERAL): detachable MD_PROPERTY
+		do
+			across
+				nodes as c
+			until
+				Result /= Void
+			loop
+				if
+					attached {MD_PROPERTY} c.item as p and then
+					a_prop_name.same_string (p.name)
+				then
+					Result := p
+				end
+			end
+		end
 
 	has (n: MD_NODE): BOOLEAN
 		do

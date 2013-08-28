@@ -7,9 +7,6 @@ note
 class
 	MD_HTML5_LOADER
 
-inherit
-	XML_NODE_ITERATOR
-	
 create
 	make_with_path,
 	make_with_string
@@ -50,6 +47,7 @@ feature {NONE} -- Initialization
 			sel: XML_ELEMENT_SELECTOR
 			xvis: XML_NODE_PRINTER
 			s: STRING_8
+			ext: XML_MD_EXTRACTOR
 		do
 			create md.make
 
@@ -59,8 +57,14 @@ feature {NONE} -- Initialization
 				xvis.set_output (create {XML_STRING_8_OUTPUT_STREAM}.make (s))
 				xdoc.process (xvis)
 				print (s)
+
 				create sel.make
 				sel.select_elements_with_attribute ("itemscope", Void)
+					--itemscope
+					--itemtype
+					--itemid
+					--itemprop
+					--itemref
 				sel.process_document (xdoc)
 				across
 					sel.items as c
@@ -72,6 +76,10 @@ feature {NONE} -- Initialization
 --					end
 					io.put_new_line
 				end
+
+				create ext.make_with_document (md)
+				xdoc.process (ext)
+				md := ext.document
 			end
 
 			microdata := md

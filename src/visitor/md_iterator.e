@@ -17,9 +17,13 @@ feature -- Visit
 			visit_composite (v)
 		end
 
-	visit_element (v: MD_ELEMENT)
+	visit_item (v: MD_ITEM)
 		do
 			visit_composite (v)
+		end
+
+	visit_property (v: MD_PROPERTY)
+		do
 		end
 
 feature -- Visit helper		

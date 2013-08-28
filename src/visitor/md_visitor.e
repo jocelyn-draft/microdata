@@ -13,9 +13,12 @@ feature -- Visitor
 		deferred
 		end
 
-	visit_element (vis: MD_ELEMENT)
+	visit_item (vis: MD_ITEM)
 		deferred
 		end
 
+	visit_property (v: MD_PROPERTY)
+		deferred
+		end
 
 end
