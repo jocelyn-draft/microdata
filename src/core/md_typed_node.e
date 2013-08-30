@@ -3,6 +3,7 @@ note
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
+	EIS: "name=HTML Microdata Itemtype", "protocol=URI", "src=http://www.w3.org/TR/microdata/#attr-itemtype"	
 
 deferred class
 	MD_TYPED_NODE

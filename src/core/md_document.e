@@ -3,6 +3,8 @@ note
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
+	EIS: "name=Microdata (HTML)", "protocol=URI", "src=http://en.wikipedia.org/wiki/Microdata_(HTML)"
+	EIS: "name=HTML Microdata", "protocol=URI", "src=http://www.w3.org/TR/microdata/"
 
 class
 	MD_DOCUMENT

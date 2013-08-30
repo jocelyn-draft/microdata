@@ -3,6 +3,7 @@ note
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
+	EIS: "name=HTML Microdata Item", "protocol=URI", "src=http://www.w3.org/TR/microdata/#items"
 
 class
 	MD_ITEM
@@ -37,9 +38,11 @@ feature -- Access
 
 	identifier: detachable IMMUTABLE_STRING_32
 			-- unique identifier of the item
+			-- cf: itemid
 
 	references: detachable LIST [READABLE_STRING_GENERAL]
 			-- References to md item by its unique identifier
+			-- cf: itemref
 
 feature -- Change
 
