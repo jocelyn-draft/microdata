@@ -38,7 +38,7 @@ feature -- Access
 	identifier: detachable IMMUTABLE_STRING_32
 			-- unique identifier of the item
 
-	item_references: detachable LIST [READABLE_STRING_GENERAL]
+	references: detachable LIST [READABLE_STRING_GENERAL]
 			-- References to md item by its unique identifier
 
 feature -- Change
@@ -62,15 +62,58 @@ feature -- Change
 			end
 		end
 
-feature {MD_HTML5_LOADER, XML_NODE_ITERATOR} -- Access
-
-	associated_xml_element: detachable XML_ELEMENT
-
-feature {MD_HTML5_LOADER} -- Change
-
-	set_associated_xml_element (e: like associated_xml_element)
+	set_references (a_refs: detachable READABLE_STRING_GENERAL)
 		do
-			associated_xml_element := e
+			if a_refs = Void then
+				references := Void
+			else
+				across
+					a_refs.split (' ') as c
+				loop
+					add_reference (c.item)
+				end
+			end
+		end
+
+	add_reference (a_ref: READABLE_STRING_GENERAL)
+			-- Add `a_ref' to `references'
+		local
+			l_refs: like references
+		do
+			l_refs := references
+			if l_refs = Void then
+				create {ARRAYED_LIST [READABLE_STRING_GENERAL]} l_refs.make (1)
+				references := l_refs
+			end
+			l_refs.force (a_ref)
+		end
+
+	import_references
+			-- Import eventual references into Current
+			-- remove the reference if imported, keep unresolved references
+		local
+			doc: like document
+		do
+			if attached references as refs then
+				doc := document
+				if doc /= Void then
+					from
+						refs.start
+					until
+						refs.after
+					loop
+						if attached doc.id_node (refs.item) as l_node then
+							put (l_node.deep_twin)
+							refs.remove
+						else
+							refs.forth
+						end
+					end
+				end
+				if refs.is_empty then
+					references := Void
+				end
+			end
 		end
 
 feature -- Status report
@@ -101,6 +144,13 @@ feature -- Status report
 				Result.append_string_general (" : ")
 				Result.append_integer (count)
 				Result.append_string_general (" props")
+			end
+			if attached references as refs and then not refs.is_empty then
+				Result.append_character (' ')
+				Result.append_character ('(')
+				Result.append_integer (refs.count)
+				Result.append_string_general (" references")
+				Result.append_character (')')
 			end
 		end
 

@@ -31,11 +31,24 @@ feature -- Test routines
 		end
 	test_08	do test_microdata (ex_08, ex_08_md) end
 	test_09	do test_microdata (ex_09, ex_09_md) end
+	test_10	do test_microdata (ex_10, ex_10_md) end
+
+	test_full_md
+		local
+			loader: MD_LOADER
+		do
+			create loader.make_with_string (schema_org_full_md)
+			if attached loader.microdata as md then
+				test_microdata (schema_org_full_md, md)
+			else
+				assert ("valid xml", False)
+			end
+		end
 
 	test_microdata (a_html: STRING; a_md: MD_DOCUMENT)
 			-- New test routine
 		local
-			loader: MD_HTML5_LOADER
+			loader: MD_LOADER
 		do
 			create loader.make_with_string (a_html)
 			if attached loader.microdata as md then
@@ -47,20 +60,20 @@ feature -- Test routines
 --			http://www.wdl.org/en/item/1/
 		end
 
-	same_metadata (md1,md2: MD_DOCUMENT): BOOLEAN
+	same_metadata (md,md_exp: MD_DOCUMENT): BOOLEAN
 		local
 			dbg: MD_DEBUG_ITERATOR
-			s1, s2: STRING_32
+			s, s_exp: STRING_32
 		do
-			create s1.make_empty
-			create dbg.make (s1)
-			md1.accept (dbg)
+			create s.make_empty
+			create dbg.make (s)
+			md.accept (dbg)
 
-			create s2.make_empty
-			create dbg.make (s2)
-			md2.accept (dbg)
+			create s_exp.make_empty
+			create dbg.make (s_exp)
+			md_exp.accept (dbg)
 
-			Result := s1.same_string (s2)
+			Result := s.same_string (s_exp)
 		end
 
 feature -- Data		
@@ -373,6 +386,86 @@ feature -- Data
 						 <dd><time itemprop="pubdate" datetime="1996-01-26">26 January 1996</time></dd>
 						</dl>
 					]"
+		end
+
+	ex_10_md: MD_DOCUMENT
+		local
+			i: MD_ITEM
+			p: MD_PROPERTY
+			id_node: MD_ID_NODE
+		do
+			create Result.make
+			create i.make ("http://n.whatwg.org/work")
+			i.add_reference ("licenses")
+			Result.put (i)
+			create p.make ("work", "images/house.jpeg", Void)
+			i.put (p)
+			create p.make ("title", "The house I found.", Void)
+			i.put (p)
+
+			create i.make ("http://n.whatwg.org/work")
+			i.add_reference ("licenses")
+			Result.put (i)
+			create p.make ("work", "images/mailbox.jpeg", Void)
+			i.put (p)
+			create p.make ("title", "The mailbox.", Void)
+			i.put (p)
+
+			create id_node.make ("licenses")
+			Result.register_id_node (id_node)
+			create p.make ("license", "http://www.opensource.org/licenses/mit-license.php", Void)
+			id_node.put (p)
+		end
+
+	ex_10: STRING
+		do
+			Result := "[
+						<!DOCTYPE HTML>
+						<html>
+						 <head>
+						  <title>Photo gallery</title>
+						 </head>
+						 <body>
+						  <h1>My photos</h1>
+						  <figure itemscope itemtype="http://n.whatwg.org/work" itemref="licenses">
+						   <img itemprop="work" src="images/house.jpeg" alt="A white house, boarded up, sits in a forest."/>
+						   <figcaption itemprop="title">The house I found.</figcaption>
+						  </figure>
+						  <figure itemscope itemtype="http://n.whatwg.org/work" itemref="licenses">
+						   <img itemprop="work" src="images/mailbox.jpeg" alt="Outside the house is a mailbox. It has a leaflet inside."/>
+						   <figcaption itemprop="title">The mailbox.</figcaption>
+						  </figure>
+						  <footer>
+						   <p id="licenses">All images licensed under the <a itemprop="license"
+						   href="http://www.opensource.org/licenses/mit-license.php">MIT
+						   license</a>.</p>
+						  </footer>
+						 </body>
+						</html>
+				]"
+		end
+
+	schema_org_full_md: STRING
+		local
+			f: PLAIN_TEXT_FILE
+		do
+			create Result.make_empty
+			Result.append ("<div>")
+
+			create f.make_with_name ("schema_org_full_md.html")
+			if f.exists then
+				f.open_read
+				from
+
+				until
+					f.exhausted
+				loop
+					f.read_stream (1_024)
+					Result.append (f.last_string)
+				end
+				f.close
+			end
+			Result.append ("</div>")
 		end
 
 

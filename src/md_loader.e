@@ -1,11 +1,21 @@
 note
-	description: "Summary description for {HTML5_LOADER}."
+	description: "[
+				Metadata parser from string or file
+				
+				usage
+				loader: MD_LOADER
+				
+				create loader.make_with_string (a_html_content)
+				if attached loader.microdata as md then
+					... manipulate the metadata from `md'
+				end
+			]"
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
 class
-	MD_HTML5_LOADER
+	MD_LOADER
 
 create
 	make_with_path,
@@ -17,6 +27,9 @@ feature {NONE} -- Initialization
 		do
 			initialize
 			xml_parser.parse_from_path (a_filename)
+			if not xml_parser.error_occurred then
+				build_microdata
+			end
 		end
 
 	make_with_string (a_string: READABLE_STRING_GENERAL)
@@ -44,44 +57,15 @@ feature {NONE} -- Initialization
 	build_microdata
 		local
 			md: like microdata
-			sel: XML_ELEMENT_SELECTOR
-			xvis: XML_NODE_PRINTER
-			s: STRING_8
 			ext: XML_MD_EXTRACTOR
 		do
 			create md.make
 
 			if attached xml_callback_document.document as xdoc then
-				create xvis.make
-				create s.make_empty
-				xvis.set_output (create {XML_STRING_8_OUTPUT_STREAM}.make (s))
-				xdoc.process (xvis)
-				print (s)
-
-				create sel.make
-				sel.select_elements_with_attribute ("itemscope", Void)
-					--itemscope
-					--itemtype
-					--itemid
-					--itemprop
-					--itemref
-				sel.process_document (xdoc)
-				across
-					sel.items as c
-				loop
---					if attached c.item.associated_xml_element as xelt then
---						print (xelt.debug_output)
---					else
-						print (c.item.debug_output)
---					end
-					io.put_new_line
-				end
-
 				create ext.make_with_document (md)
 				xdoc.process (ext)
 				md := ext.document
 			end
-
 			microdata := md
 		end
 
@@ -94,6 +78,5 @@ feature {NONE} -- Implementation
 	xml_parser: XML_PARSER
 
 	xml_callback_document: XML_CALLBACKS_DOCUMENT
-
 
 end

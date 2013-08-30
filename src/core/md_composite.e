@@ -28,7 +28,7 @@ feature -- Access
 
 	nodes: LIST [MD_NODE]
 
-	elements: LIST [MD_ITEM]
+	items: LIST [MD_ITEM]
 		local
 			l_nodes: like nodes
 		do
@@ -68,7 +68,11 @@ feature -- Change
 				l_nodes.force (a_node)
 				a_node.set_parent (Current)
 			end
+		end
 
+	remove (a_node: MD_NODE)
+		do
+			nodes.prune_all (a_node)
 		end
 
 feature -- Report

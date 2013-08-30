@@ -27,7 +27,8 @@ feature {NONE} -- Initialization
 	make_with_document (a_doc: MD_DOCUMENT)
 		do
 			document := a_doc
-			create items_stack.make (1)
+			create stack_of_nodes.make (1)
+			create xml_associations.make (1)
 		end
 
 feature -- Access
@@ -36,29 +37,20 @@ feature -- Access
 
 feature -- Visit
 
-	items_stack: ARRAYED_STACK [MD_NODE]
-
-	last_item: detachable MD_ITEM
-		do
-			if not items_stack.is_empty then
-				if attached {MD_ITEM} items_stack.item as res then
-					Result := res
-				end
-			end
-		end
 
 	process_element (e: XML_ELEMENT)
 		local
+			l_id_node: detachable MD_ID_NODE
 			l_item, l_new_item: detachable MD_ITEM
 			l_prop, l_new_prop: detachable MD_PROPERTY
-			l_last_item: like last_item
+			l_last_container: like last_container
 			l_node: detachable MD_NODE
 			l_name,
 			l_type: detachable READABLE_STRING_32
 			l_value: detachable READABLE_STRING_32
 			l_tagname: READABLE_STRING_32
 		do
-			l_last_item := last_item
+			l_last_container := last_container
 
 			if attached e.attribute_by_name ("itemtype") as att_type then
 				l_type := att_type.value
@@ -112,6 +104,9 @@ feature -- Visit
 					if attached e.attribute_by_name ("itemid") as l_id then
 						l_item.set_identifier (l_id.value)
 					end
+					if attached e.attribute_by_name ("itemref") as l_ref then
+						l_item.set_references (l_ref.value)
+					end
 					l_node := l_item
 				elseif l_value = Void then
 					create l_prop.make (l_name, element_text_content (e), l_type)
@@ -121,10 +116,10 @@ feature -- Visit
 					l_node := l_prop
 				end
 				if l_item /= Void then
-					items_stack.put (l_item)
+					push_on_stack (l_item, e)
 				end
 				Precursor (e)
-				if l_last_item /= Void then
+				if l_last_container /= Void then
 					if l_name.has (' ') then
 						across
 							l_name.split (' ') as c_names
@@ -132,44 +127,118 @@ feature -- Visit
 							if l_item /= Void then
 								l_new_item := l_item.twin
 								l_new_item.set_name (c_names.item)
-								l_last_item.put (l_new_item)
+								l_last_container.put (l_new_item)
 							elseif l_prop /= Void then
 								l_new_prop := l_prop.twin
 								l_new_prop.set_name (c_names.item)
-								l_last_item.put (l_new_prop)
+								l_last_container.put (l_new_prop)
 							else
 								check is_item_or_prop: False end
 							end
 						end
 					else
-						l_last_item.put (l_node)
+						l_last_container.put (l_node)
 					end
 				end
 				if l_item /= Void then
-					items_stack.remove
+					unpush_from_stack
 				end
 			elseif e.has_attribute_by_name ("itemscope") then
 				create l_item.make (l_type)
 				if attached e.attribute_by_name ("itemid") as l_id then
 					l_item.set_identifier (l_id.value)
 				end
+				if attached e.attribute_by_name ("itemref") as l_ref then
+					l_item.set_references (l_ref.value)
+				end
 				document.put (l_item)
-				items_stack.put (l_item)
+				push_on_stack (l_item, e)
 				Precursor (e)
-				items_stack.remove
+				unpush_from_stack
+			elseif e.has_attribute_by_name ("id") and then attached e.attribute_by_name ("id") as att_id then
+				create l_id_node.make (att_id.value)
+				document.register_id_node (l_id_node)
+				push_on_stack (l_id_node, e)
+				Precursor (e)
+				unpush_from_stack
+				if l_id_node.count = 0 then
+						-- No properties, thus removing it
+					document.unregister_id_node (l_id_node)
+				end
 			else
 				Precursor (e)
 			end
 			if
-				l_last_item /= Void and then
-				l_last_item.associated_xml_element = e
+				l_last_container /= Void and then
+				associated_xml_element (l_last_container) = e -- missing an unpush_from_stack ??
 			then
 					-- Close current itemscope
 				from
 				until
-					items_stack.is_empty or items_stack.item /= l_last_item
+					stack_of_nodes.is_empty or stack_of_nodes.item /= l_last_container
 				loop
-					items_stack.remove
+					stack_of_nodes.remove
+				end
+			end
+		ensure then
+			same_stack_count: stack_of_nodes.count = old stack_of_nodes.count
+		end
+
+feature {NONE} -- Helpers
+
+	stack_of_nodes: ARRAYED_STACK [MD_NODE]
+
+	xml_associations: ARRAYED_LIST [TUPLE [xml: XML_ELEMENT; md: MD_NODE]]
+
+	unpush_from_stack
+		require
+			not stack_of_nodes.is_empty
+		local
+			l_xml_associations: like xml_associations
+			done: BOOLEAN
+			l_node: detachable MD_NODE
+		do
+			l_node := stack_of_nodes.item
+			stack_of_nodes.remove
+			from
+				l_xml_associations := xml_associations
+				l_xml_associations.start
+			until
+				done
+			loop
+				if l_xml_associations.item.md = l_node then
+					l_xml_associations.remove
+					done := True
+				else
+					l_xml_associations.forth
+				end
+			end
+		end
+
+	push_on_stack (a_node: MD_NODE; e: XML_ELEMENT)
+		do
+			xml_associations.force ([e, a_node])
+			stack_of_nodes.put (a_node)
+		end
+
+	associated_xml_element (a_node: MD_NODE): detachable XML_ELEMENT
+		do
+			across
+				xml_associations as c
+			until
+				Result /= Void
+			loop
+				if c.item.md = a_node then
+					Result := c.item.xml
+				end
+			end
+		end
+
+	last_container: detachable MD_COMPOSITE
+		do
+			if not stack_of_nodes.is_empty then
+				if attached {like last_container} stack_of_nodes.item as res then
+					Result := res
 				end
 			end
 		end

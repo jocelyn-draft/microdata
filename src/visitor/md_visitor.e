@@ -13,6 +13,10 @@ feature -- Visitor
 		deferred
 		end
 
+	visit_id_node (vis: MD_ID_NODE)
+		deferred
+		end
+
 	visit_item (vis: MD_ITEM)
 		deferred
 		end
